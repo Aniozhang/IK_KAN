@@ -1,0 +1,3 @@
+pykan
+pytorch
+matplotlib
