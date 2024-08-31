@@ -38,7 +38,7 @@ for dof in tqdm(range(4, n)):
     ## Set all joint limits to -180 to 180 for simplicity.
     jointLimits = [(-np.pi, np.pi), (-np.pi, np.pi), (-np.pi, np.pi)]
 
-    robot = RobotArm(numJoints, jointLengths, jointAxes, jointLengths)
+    robot = RobotArm(numJoints, jointLengths, jointAxes, jointLimits)
 
     ## Create the dataset lists for this robot arm
     datasetX = []

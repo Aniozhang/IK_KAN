@@ -2,6 +2,7 @@ from kan import *
 import torch
 import numpy as np
 import os 
+from torch.utils.data import TensorDataset, random_split
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -39,21 +40,20 @@ def create_torch_dataset(X, Y, ratio):
     test_input, test_output = zip(*test_dataset)
 
     # Convert back to tensor datasets
-    train_input = torch.stack(train_input)
-    train_output = torch.stack(train_output)
-    test_input = torch.stack(test_input)
-    test_output = torch.stack(test_output)
+    train_input = torch.stack(train_input).to(device)
+    train_output = torch.stack(train_output).to(device)
+    test_input = torch.stack(test_input).to(device)
+    test_output = torch.stack(test_output).to(device)
 
     return {
         "train_input": train_input,
-        "train_output": train_output,
+        "train_label": train_output,
         "test_input": test_input,
-        "test_output": test_output
+        "test_label": test_output
     }
     
 
 def trainForRobot(dof):
-
     ## Load the dataset
     dataDir = str(dof) + "_robot"
     dataDirPath = os.path.join(datasetPath, dataDir)
@@ -64,11 +64,30 @@ def trainForRobot(dof):
     X = np.load(inputFilePath)
     Y = np.load(outputFilePath)
 
-    dataSet = create_torch_dataset(X, Y, 0.8)
+    dataset = create_torch_dataset(X, Y, 0.8)
+
+    ## Folder to save at
+    os.makedirs(os.path.dirname("./kanModels/"), exist_ok=True)
+    os.makedirs(os.path.dirname("./kanModels/kan_" + str(dof)), exist_ok=True)
+    modelFolder = "./kanModels/kan_" + str(dof)
 
     ## The model's input will always be the 6 parameters required to discribe the end effector
     ## The model's output will be the same number as the degree of freedoms. 
-    model = KAN(width=[dof,dof*10,6], grid=3, k=3, seed=0, device=device)
+    model = KAN(width=[dof,dof**2,6], grid=3, k=3, seed=0, device=device)
 
+    model.fit(dataset, steps=20) # ,img_folder=modelFolder
+    model.prune()
+    model.plot()
 
 trainForRobot(4)
+
+if __name__ == "__main__":
+    for dof in range(4, 50):
+        if device == "cuda":
+            try:
+                trainForRobot(dof)
+            except torch.cuda.OutOfMemoryError:
+                device = "cpu"
+                trainForRobot(dof)
+        trainForRobot(dof)
+        
